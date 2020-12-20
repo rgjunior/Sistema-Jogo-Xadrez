@@ -46,6 +46,19 @@ public class Board {
 		piece.position = position;
 		}
 	
+	public Piece removePiece(Position position) {
+		if (!positionExists(position)) {				// programação defensiva: verifica se a posição não existe. Em caso positivo, mostra a mensagem de erro
+			throw new BoardException("Não há esta posição no tabuleiro");
+		}
+		if (piece(position) == null) {				// testa se a posição está vazia. Em caso positivo, não faz nada
+			return null;
+		}
+		Piece aux = piece(position);
+		aux.position = null;
+		pieces[position.getRow()][position.getColumn()] = null;		// informa que, na linha e coluna especificada, não há peça (foi removida)
+		return aux;	
+	}
+	
 	private boolean positionExists(int row, int column) {
 		return row >=0 && row < rows && column >=0 && column < columns;			// condição para saber se uma posição existe no tabuleiro
 	}
