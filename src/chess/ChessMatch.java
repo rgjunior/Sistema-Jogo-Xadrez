@@ -2,6 +2,7 @@ package chess;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import boardgame.Board;
 import boardgame.Piece;
@@ -14,6 +15,7 @@ public class ChessMatch {
 	private int turn;
 	private Color currentPlayer;
 	private Board board;
+	private boolean check;
 	
 	private List<Piece> piecesOnTheBoard = new ArrayList<>();
 	private List<Piece> capturedPieces = new ArrayList<>();
@@ -22,6 +24,7 @@ public class ChessMatch {
 		board = new Board(8, 8);							// define o tamanho do tabuleiro
 		turn = 1;
 		currentPlayer = Color.WHITE;
+		// não é necessário setar 'check' para 'false', pois esta variável já inicia neste valor por padrão
 		initialSetup();
 	}
 	
@@ -31,6 +34,10 @@ public class ChessMatch {
 	
 	public Color getCurrentPlayer () {
 		return currentPlayer;
+	}
+	
+	public boolean getCheck() {
+		return check;
 	}
 	
 	public ChessPiece[][] getpieces() {
@@ -55,6 +62,14 @@ public class ChessMatch {
 		validateSourcePosition(source);						// responsável pela validação da posição de origem
 		validateTargetPosition(source, target);				// responsável pela validação da posição de destino
 		Piece capturedPiece = makeMove(source, target);		// 'makeMove' será responsável por realizar o movimento da peça
+		
+		if (testCheck(currentPlayer)) {						// testa se o jogador se colocou em xeque
+			undoMove(source, target, capturedPiece);		// desfaz o movimento
+			throw new ChessException("Voce nao pode se colocar em xeque");
+		}
+		
+		check = (testCheck(opponent(currentPlayer))) ? true : false; // testa se o oponente está em xeque
+		
 		nextTurn();											// para trocar o turno do jogador
 		return (ChessPiece)capturedPiece; 
 	}
@@ -72,9 +87,20 @@ public class ChessMatch {
 		return capturedPiece;
 	}
 	
+	private void undoMove(Position source, Position target, Piece capturedPiece) {
+		Piece p = board.removePiece(target);					// retira a peça que chegou na posição de destino
+		board.placePiece(p, source);							// recoloca a peça na posição de origem
+		
+		if (capturedPiece != null) {							// teste se houve captura de peça
+			board.placePiece(capturedPiece, target);			// devolve a peça capturada a sua posição
+			capturedPieces.remove(capturedPiece);				// retira a peça capturada da lista de peças que foram capturadas
+			piecesOnTheBoard.add(capturedPiece);				// adiciona a peça na lista de peças que estão no tabuleiro 
+		}
+	}
+	
 	private void validateSourcePosition(Position position) {
 		if (!board.thereIsAPiece(position)) {
-			throw new ChessException("Não existe peça na posição de origem");
+			throw new ChessException("Nao existe peca na posição de origem");
 		}
 		
 		if (currentPlayer != ((ChessPiece)board.piece(position)).getColor()) {
@@ -94,6 +120,32 @@ public class ChessMatch {
 	private void nextTurn() {
 		turn++;
 		currentPlayer = (currentPlayer == Color.WHITE) ? Color.BLACK : Color.WHITE;
+	}
+	
+	private Color opponent(Color color) {
+		return (color == Color.WHITE) ? Color.BLACK : color.WHITE; 
+	}
+	
+	private ChessPiece king(Color color) {
+		List<Piece> list = piecesOnTheBoard.stream().filter(x -> ((ChessPiece)x).getColor() == color).collect(Collectors.toList());
+		for (Piece p : list) {
+			if (p instanceof King) {
+				return (ChessPiece)p;
+			}
+		}
+		throw new IllegalStateException("O rei " + color + "nao esta no tabuleiro");
+	}
+	
+	private boolean testCheck(Color color) {
+		Position kingPosition = king(color).getChessPosition().toPosition(); // para descobrir a posição do rei
+		List<Piece> opponentPieces = piecesOnTheBoard.stream().filter(x -> ((ChessPiece)x).getColor() == opponent(color)).collect(Collectors.toList()); // descobre a lista de peças do oponente
+		for (Piece p : opponentPieces) {									// vai testar todas as peças do oponente
+			boolean[][] mat = p.possibleMoves();								// vai descobrir todos os possíveis movimentos da peça 'p'
+			if (mat[kingPosition.getRow()][kingPosition.getColumn()]) {		// se a posição na variável 'mat' coincidir com a posição do rei...
+				return true;												// quer dizer que o rei está em cheque, e retorna 'true'
+			}
+		}
+		return false;														// significa que o rei não está em xeque
 	}
 	
 	private void placeNewPiece(char column, int row, ChessPiece piece) {

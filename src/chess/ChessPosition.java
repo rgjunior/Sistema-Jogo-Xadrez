@@ -9,7 +9,7 @@ public class ChessPosition {
 	
 	public ChessPosition(char column, int row) {
 		if (column < 'a' || column > 'h' || row < 1 || row > 8) {					// programação defensiva: testa se as colunas e linhas estão dentro dos limites do tabuleiro (a1 até h8)
-			throw new ChessException("Erro de instanciação: está fora do padrão a1-h8");
+			throw new ChessException("Erro de instanciacao: esta fora do padrao a1-h8");
 		}
 		this.column = column;
 		this.row = row;
@@ -28,7 +28,7 @@ public class ChessPosition {
 	}
 	
 	protected static ChessPosition fromPosition(Position position) {
-		return new ChessPosition((char)('a' - position.getColumn()), 8 - position.getRow());
+		return new ChessPosition((char)('a' + position.getColumn()), 8 - position.getRow());
 	}
 	
 	@Override
